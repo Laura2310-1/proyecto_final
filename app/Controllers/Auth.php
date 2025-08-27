@@ -1,36 +1,46 @@
 <?php
-   namespace App\Controllers;
+namespace App\Controllers;
+use App\Models\UsuarioModel;
 
-   use App\Models\UserModel;
+class Auth extends BaseController
+{
+    public function login()
+    {
+        return view('auth/login');
+    }
 
-   class Auth extends BaseController
-   {
-       public function login()
-       {
-           return view('login');
-       }
+    public function authUser()
+    {
+        $usuarioModel = new UsuarioModel();
+        $correo = $this->request->getPost('correo');
+        $password = $this->request->getPost('password');
 
-       public function authenticate()
-       {
-           $model = new UserModel();
-           $username = $this->request->getPost('username');
-           $password = $this->request->getPost('password');
+        $usuario = $usuarioModel->where('correo', $correo)->first();
 
-           $user = $model->where('correo', $username)->first();
+        if ($usuario && password_verify($password, $usuario['password'])) {
+            session()->set([
+                'id' => $usuario['id'],
+                'nombre' => $usuario['nombre'],
+                'rol' => $usuario['rol'],
+                'isLoggedIn' => true
+            ]);
 
-           if ($user && password_verify($password, $user['contrasena'])) {
-               session()->set('loggedIn', true);
-               session()->set('user', $user);
-               return redirect()->to('/dashboard');
-           } else {
-               return redirect()->back()->with('error', 'Credenciales incorrectas');
-           }
-       }
 
-       public function logout()
-       {
-           session()->destroy();
-           return redirect()->to('/login');
-       }
-   }
-   
+            if ($usuario['rol'] == 'admin') {
+                return redirect()->to('/dashboard/admin');
+            } elseif ($usuario['rol'] == 'trabajador') {
+                return redirect()->to('/dashboard/trabajador');
+            } else {
+                return redirect()->to('/dashboard/cliente');
+            }
+        } else {
+            return redirect()->back()->with('error', 'Usuario o contraseña incorrectos');
+        }
+    }
+
+    public function logout()
+    {
+        session()->destroy();
+        return redirect()->to('/login');
+    }
+}
