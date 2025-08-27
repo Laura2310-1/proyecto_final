@@ -6,10 +6,13 @@ class Auth extends BaseController
 {
     public function login()
     {
+        if (session()->get('isLoggedIn')) {
+            return $this->redirectToDashboard(session()->get('rol'));
+        }
         return view('auth/login');
     }
 
-    public function authUser()
+    public function authenticate()  
     {
         $usuarioModel = new UsuarioModel();
         $correo = $this->request->getPost('correo');
@@ -21,18 +24,12 @@ class Auth extends BaseController
             session()->set([
                 'id' => $usuario['id'],
                 'nombre' => $usuario['nombre'],
+                'correo' => $usuario['correo'], // Agregar correo a la sesión
                 'rol' => $usuario['rol'],
                 'isLoggedIn' => true
             ]);
 
-
-            if ($usuario['rol'] == 'admin') {
-                return redirect()->to('/dashboard/admin');
-            } elseif ($usuario['rol'] == 'trabajador') {
-                return redirect()->to('/dashboard/trabajador');
-            } else {
-                return redirect()->to('/dashboard/cliente');
-            }
+            return $this->redirectToDashboard($usuario['rol']);
         } else {
             return redirect()->back()->with('error', 'Usuario o contraseña incorrectos');
         }
@@ -42,5 +39,17 @@ class Auth extends BaseController
     {
         session()->destroy();
         return redirect()->to('/login');
+    }
+
+    private function redirectToDashboard($rol)
+    {
+        switch ($rol) {
+            case 'admin':
+                return redirect()->to('/dashboard/admin');
+            case 'trabajador':
+                return redirect()->to('/dashboard/trabajador');
+            default:
+                return redirect()->to('/dashboard/cliente');
+        }
     }
 }
